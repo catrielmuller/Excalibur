@@ -742,10 +742,6 @@ O|===|* >________________>\n\
    */
   public add(screenElement: ScreenElement): void;
   public add(entity: any): void {
-    if (entity instanceof ScreenElement) {
-      this.currentScene.addScreenElement(entity);
-      return;
-    }
     if (entity instanceof Actor) {
       this._addChild(entity);
     }

@@ -47,6 +47,7 @@ import { Collider } from './Collision/Collider';
 import { Shape } from './Collision/Shape';
 
 import { Entity } from './EntityComponentSystem/Entity';
+import { LegacyDrawComponent } from './Drawing/LegacyDrawComponent';
 
 export function isActor(x: any): x is Actor {
   return x instanceof Actor;
@@ -507,6 +508,8 @@ export class ActorImpl extends Entity implements Actionable, Eventable, PointerE
       this.opacity = color.a;
     }
 
+    this.addComponent(new LegacyDrawComponent());
+
     // Build default pipeline
     this.traits.push(new Traits.TileMapCollisionDetection());
     this.traits.push(new Traits.OffscreenCulling());
@@ -874,6 +877,9 @@ export class ActorImpl extends Entity implements Actionable, Eventable, PointerE
     actor.body.collider.type = CollisionType.PreventCollision;
     if (Util.addItemToArray(actor, this.children)) {
       actor.parent = this;
+      if (this.scene) {
+        this.scene.entityManager.addEntity(actor);
+      }
     }
   }
   /**
@@ -965,9 +971,7 @@ export class ActorImpl extends Entity implements Actionable, Eventable, PointerE
    * @param newIndex new z-index to assign
    */
   public setZIndex(newIndex: number) {
-    this.scene.cleanupDrawTree(this);
     this._zIndex = newIndex;
-    this.scene.updateDrawTree(this);
   }
 
   /**
@@ -1200,11 +1204,6 @@ export class ActorImpl extends Entity implements Actionable, Eventable, PointerE
    * @param delta The time since the last draw in milliseconds
    */
   public draw(ctx: CanvasRenderingContext2D, delta: number) {
-    ctx.save();
-    ctx.translate(this.pos.x, this.pos.y);
-    ctx.rotate(this.rotation);
-    ctx.scale(this.scale.x, this.scale.y);
-
     // translate canvas by anchor offset
     ctx.save();
     ctx.translate(-(this._width * this.anchor.x), -(this._height * this.anchor.y));
@@ -1220,20 +1219,12 @@ export class ActorImpl extends Entity implements Actionable, Eventable, PointerE
       this.currentDrawing.draw({ ctx, x: offsetX, y: offsetY, opacity: this.opacity });
     } else {
       if (this.color && this.body && this.body.collider && this.body.collider.shape) {
-        this.body.collider.shape.draw(ctx, this.color, new Vector(this.width * this.anchor.x, this.height * this.anchor.y));
+        this.body.collider.shape.draw(ctx, this.color, new Vector(this._width * this.anchor.x, this._height * this.anchor.y));
       }
     }
     ctx.restore();
-
-    // Draw child actors
-    for (let i = 0; i < this.children.length; i++) {
-      if (this.children[i].visible) {
-        this.children[i].draw(ctx, delta);
-      }
-    }
 
     this._postdraw(ctx, delta);
-    ctx.restore();
   }
 
   /**
